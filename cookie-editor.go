@@ -28,7 +28,7 @@ type Cookie struct {
 
 type Cookies []*Cookie
 
-// Parse parses a Netscape cookie file from r and returns the list of cookies.
+// Parse parses a Netscape cookie file from r and returns the list of cookies
 func Parse(r io.Reader, softMode bool) ([]*Cookie, error) {
 	var cookies []*Cookie
 	s := bufio.NewScanner(r)
