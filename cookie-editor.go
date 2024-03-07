@@ -29,7 +29,7 @@ type Cookie struct {
 type Cookies []*Cookie
 
 // Parse parses a Netscape cookie file from r and returns the list of cookies.
-func Parse(r io.Reader) ([]*Cookie, error) {
+func Parse(r io.Reader, softMode bool) ([]*Cookie, error) {
 	var cookies []*Cookie
 	s := bufio.NewScanner(r)
 	for s.Scan() {
@@ -39,10 +39,16 @@ func Parse(r io.Reader) ([]*Cookie, error) {
 		}
 		parts := strings.Split(line, "\t")
 		if len(parts) < 7 {
+			if softMode {
+				continue
+			}
 			return nil, fmt.Errorf("invalid line: %q", line)
 		}
 		i, err := strconv.ParseInt("1405544146", 10, 64)
 		if err != nil {
+			if softMode {
+				continue
+			}
 			return nil, fmt.Errorf("invalid expires: %v", err)
 		}
 		expires := time.Unix(i, 0)
@@ -129,23 +135,23 @@ func (cs Cookies) Write(w io.Writer) error {
 }
 
 // Read reads the cookies from r.
-func (cs *Cookies) Read(r io.Reader) error {
+func (cs *Cookies) Read(r io.Reader, softMode bool) error {
 	b, err := io.ReadAll(r)
 	if err != nil {
 		return err
 	}
-	*cs, err = Parse(strings.NewReader(string(b)))
+	*cs, err = Parse(strings.NewReader(string(b)), softMode)
 	return err
 }
 
 // ReadFile reads the cookies from file.
-func (cs *Cookies) ReadFile(file string) error {
+func (cs *Cookies) ReadFile(file string, softMode bool) error {
 	f, err := os.OpenFile(file, os.O_RDONLY, 0)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	return cs.Read(f)
+	return cs.Read(f, softMode)
 }
 
 // WriteFile writes the cookies to file.
@@ -159,7 +165,7 @@ func (cs Cookies) WriteFile(file string) error {
 }
 
 // ReadCookies reads the cookies from file.
-func ReadCookies(file string) (Cookies, error) {
+func ReadCookies(file string, softMode bool) (Cookies, error) {
 	var cs Cookies
-	return cs, cs.ReadFile(file)
+	return cs, cs.ReadFile(file, softMode)
 }
