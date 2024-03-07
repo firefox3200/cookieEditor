@@ -1,4 +1,4 @@
-package github.com/firefox3200/cookieEditor
+package cookieEditor
 
 //This package contains the parser for the netscape cookie file format.
 
