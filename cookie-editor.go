@@ -17,18 +17,18 @@ import (
 
 // Cookie represents a Netscape cookie.
 type Cookie struct {
-	Name     string    `json:"name"`
-	Value    string    `json:"value"`
 	Domain   string    `json:"domain"`
-	Path     string    `json:"path"`
 	Expires  time.Time `json:"expires"`
-	Secure   bool      `json:"secure"`
 	HttpOnly bool      `json:"httpOnly"`
+	Name     string    `json:"name"`
+	Path     string    `json:"path"`
+	Secure   bool      `json:"secure"`
+	Value    string    `json:"value"`
 }
 
 type Cookies []*Cookie
 
-// Parse parses a Netscape cookie file from r and returns the list of cookies
+// Parse parses a Netscape cookie file from r and returns the list of cookies.
 func Parse(r io.Reader, softMode bool) ([]*Cookie, error) {
 	var cookies []*Cookie
 	s := bufio.NewScanner(r)
