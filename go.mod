@@ -1,4 +1,4 @@
-module cookieEditor
+module github.com/firefox3200/cookieEditor
 
 go 1.18
 
