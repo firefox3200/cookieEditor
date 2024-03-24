@@ -44,14 +44,20 @@ func Parse(r io.Reader, softMode bool) ([]*Cookie, error) {
 			}
 			return nil, fmt.Errorf("invalid line: %q", line)
 		}
-		i, err := strconv.ParseInt("1405544146", 10, 64)
+		i, err := strconv.ParseInt(parts[4], 10, 64)
 		if err != nil {
 			if softMode {
 				continue
 			}
 			return nil, fmt.Errorf("invalid expires: %v", err)
 		}
+		for i > 9999999999 {
+			i = i / 1000
+		}
 		expires := time.Unix(i, 0)
+		if expires.Year() > 9999 {
+			expires = time.Now().Add(24 * time.Hour * 2)
+		}
 		cookies = append(cookies, &Cookie{
 			Name:     parts[5],
 			Value:    parts[6],
@@ -70,12 +76,28 @@ func Parse(r io.Reader, softMode bool) ([]*Cookie, error) {
 
 // String returns the string representation of the cookie.
 func (c *Cookie) String() string {
-	return fmt.Sprintf("%s=%s; Domain=%s; Path=%s; Expires=%s; Secure=%t; HttpOnly=%t", c.Name, c.Value, c.Domain, c.Path, c.Expires, c.Secure, c.HttpOnly)
+	return fmt.Sprintf("%s=%s; Domain=%s; Path=%s; Expires=%s; Secure=%t; HttpOnly=%t", c.Name, c.Value, c.Domain, c.Path, strconv.FormatInt(c.Expires.Unix(), 10), c.Secure, c.HttpOnly)
 }
 
 // String json cookie format
 func (c *Cookie) StringJson() string {
-	b, err := json.Marshal(c)
+	b, err := json.Marshal(struct {
+		Domain   string `json:"domain"`
+		Expires  int64  `json:"expires"`
+		HttpOnly bool   `json:"httpOnly"`
+		Name     string `json:"name"`
+		Path     string `json:"path"`
+		Secure   bool   `json:"secure"`
+		Value    string `json:"value"`
+	}{
+		Domain:   c.Domain,
+		Expires:  c.Expires.Unix(),
+		HttpOnly: c.HttpOnly,
+		Name:     c.Name,
+		Path:     c.Path,
+		Secure:   c.Secure,
+		Value:    c.Value,
+	})
 	if err != nil {
 		return fmt.Sprintf("error: %v", err)
 	}
@@ -104,6 +126,45 @@ func (cs Cookies) StringJson() string {
 	}
 	s += "]\n"
 	return s
+}
+
+func (c *Cookie) Contains(condition Cookie) bool {
+	switch {
+	case condition.Name != "":
+		if strings.TrimSpace(c.Name) != strings.TrimSpace(condition.Name) {
+			break
+		}
+		fallthrough
+	case condition.Value != "":
+		if strings.TrimSpace(c.Value) != strings.TrimSpace(condition.Value) {
+			break
+		}
+		fallthrough
+	case condition.Domain != "":
+		if strings.TrimSpace(c.Domain) != strings.TrimSpace(condition.Domain) {
+			break
+		}
+		fallthrough
+	case condition.Path != "":
+		if strings.TrimSpace(c.Path) != strings.TrimSpace(condition.Path) {
+			break
+		}
+		fallthrough
+	case condition.Expires != time.Time{}:
+		if !c.Expires.Equal(condition.Expires) {
+			break
+		}
+		fallthrough
+	default:
+		if c.Secure != condition.Secure {
+			break
+		}
+		if c.HttpOnly != condition.HttpOnly {
+			break
+		}
+		return true
+	}
+	return false
 }
 
 // Filter returns the cookies that match the domain and path.
